@@ -3,23 +3,14 @@ let kaiAnimation;
 let alex;
 let alexAnimation;
 let character;
-
 let trees;
+let map;
 
 function createCharacterAnimation(imageFile, frameWidth, frameHeight) {
     let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
     let animation = loadAnimation(spriteSheet);
     animation.frameDelay = 30;
     return animation;
-}
-
-function createCharacter(imageFile, frameWidth, frameHeight) {
-    let sprite = createSprite(width / 2, height / 2);
-    let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
-    let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = 30;
-    sprite.addAnimation('normal', animation);
-    return sprite;
 }
 
 function createTree(x, y) {
@@ -33,6 +24,8 @@ function createTree(x, y) {
 function preload() {
     alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
     kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
+
+    map = loadStrings('assets/map.txt');
 }
 
 function setup() {
@@ -45,22 +38,24 @@ function setup() {
     kai.addAnimation('normal', kaiAnimation);
 
     trees = new Group();
-    let x = 16;
-    for ( ; x < width ; x += 32) {
-        trees.add(createTree(x, 16));
-    }
-    x -= 32;
-    for (let y = 16 ; y < height ; y += 32) {
-        trees.add(createTree(x, y));
-    }
     let y = 16;
-    for ( ; y < height ; y += 32) {
-        trees.add(createTree(16, y));
-    }
-    y -= 32;
-    for (let x = 16 ; x < width ; x += 32) {
-        trees.add(createTree(x, y));
-    }
+    map.forEach(row => {
+        let x = 16;
+        for(let i = 0 ; i < row.length ; i++) {
+            switch (row.charAt(i)) {
+                case 't':
+                    trees.add(createTree(x, y));
+                    break;
+                case ' ':
+                    // do nothing
+                    break;
+                default:
+                    throw 'Invalid map character: ' + row.charAt(i)
+            }
+            x += 32;
+        }
+        y += 32;
+    });
 }
 
 function draw() {
@@ -96,6 +91,12 @@ function draw() {
         }
         if (keyIsDown(DOWN_ARROW)) {
             character.velocity.y = 5;
+        }
+
+        if (keyDown('z')) {
+            camera.zoom = 0.2;
+        } else {
+            camera.zoom = 1;
         }
 
         character.collide(trees);
