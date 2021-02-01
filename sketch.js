@@ -1,15 +1,22 @@
 let kai;
+let kaiAnimation;
 let alex;
+let alexAnimation;
 let character;
 
-let trees = [];
+let trees;
 
-let canvasWidth = 1000;
-let canvasHeight = 500;
+function createCharacterAnimation(imageFile, frameWidth, frameHeight) {
+    let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
+    let animation = loadAnimation(spriteSheet);
+    animation.frameDelay = 30;
+    return animation;
+}
 
-function createCharacter(image1, image2) {
-    let sprite = createSprite(canvasWidth / 2, canvasHeight / 2);
-    let animation = loadAnimation(image1, image2);
+function createCharacter(imageFile, frameWidth, frameHeight) {
+    let sprite = createSprite(width / 2, height / 2);
+    let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
+    let animation = loadAnimation(spriteSheet);
     animation.frameDelay = 30;
     sprite.addAnimation('normal', animation);
     return sprite;
@@ -24,16 +31,36 @@ function createTree(x, y) {
 }
 
 function preload() {
-    kai = createCharacter('assets/Kai-1.png', 'assets/Kai-2.png');
-    alex = createCharacter('assets/Alex-1.png', 'assets/Alex-2.png');
-
-    for (let x = 0 ; x < canvasWidth ; x += 32) {
-        trees.push(createTree(x, 32));
-    }
+    alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
+    kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
 }
 
 function setup() {
-    createCanvas(canvasWidth, canvasHeight);
+    createCanvas(1024, 736);
+
+    alex = createSprite(width / 2, height / 2);
+    alex.addAnimation('normal', alexAnimation);
+
+    kai = createSprite(width / 2, height / 2);
+    kai.addAnimation('normal', kaiAnimation);
+
+    trees = new Group();
+    let x = 16;
+    for ( ; x < width ; x += 32) {
+        trees.add(createTree(x, 16));
+    }
+    x -= 32;
+    for (let y = 16 ; y < height ; y += 32) {
+        trees.add(createTree(x, y));
+    }
+    let y = 16;
+    for ( ; y < height ; y += 32) {
+        trees.add(createTree(16, y));
+    }
+    y -= 32;
+    for (let x = 16 ; x < width ; x += 32) {
+        trees.add(createTree(x, y));
+    }
 }
 
 function draw() {
@@ -49,8 +76,10 @@ function draw() {
 
         if (keyWentDown('a')) {
             character = alex;
+            kai.remove();
         } else if (keyWentDown('k')) {
             character = kai;
+            alex.remove();
         }
     } else {
         character.velocity.x = 0;
@@ -69,10 +98,8 @@ function draw() {
             character.velocity.y = 5;
         }
 
-        drawSprite(character);
-        trees.forEach(tree => {
-            drawSprite(tree);
-            character.collide(tree);
-        });
+        character.collide(trees);
+
+        drawSprites();
     }
 }
