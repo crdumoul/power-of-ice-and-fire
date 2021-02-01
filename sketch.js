@@ -119,9 +119,11 @@ function draw() {
 
         if (keyIsDown(LEFT_ARROW)) {
             character.velocity.x = -5;
+            character.mirrorX(-1);
         }
         if (keyIsDown(RIGHT_ARROW)) {
             character.velocity.x = 5;
+            character.mirrorX(1);
         }
         if (keyIsDown(UP_ARROW)) {
             character.velocity.y = -5;
