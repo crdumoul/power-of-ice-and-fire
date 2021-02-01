@@ -3,8 +3,12 @@ let kaiAnimation;
 let alex;
 let alexAnimation;
 let character;
-let trees;
 let map;
+
+let trees;
+
+let skeletonAnimation;
+let skeletons;
 
 function createCharacterAnimation(imageFile, frameWidth, frameHeight) {
     let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
@@ -13,19 +17,48 @@ function createCharacterAnimation(imageFile, frameWidth, frameHeight) {
     return animation;
 }
 
+function createSkeletonAnimation() {
+    let spriteSheet = loadSpriteSheet('assets/skeleton.png', 22, 32, 1);
+    let animation = loadAnimation(spriteSheet);
+    return animation;
+}
+
+function createSkeleton(x, y) {
+    let skeleton = createSprite(x, y);
+    skeleton.addAnimation('normal', skeletonAnimation);
+    skeleton.setSpeed(1, random(0, 360));
+    return skeleton;
+}
+
 function createTree(x, y) {
     let tree = createSprite(x, y);
     tree.addAnimation('normal', 'assets/tree1.png');
-    tree.width = 32;
-    tree.height = 32;
+    tree.immovable = true;
     return tree;
 }
 
 function preload() {
     alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
     kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
+    skeletonAnimation = createSkeletonAnimation();
 
     map = loadStrings('assets/map.txt');
+}
+
+function frontalCollision(sprite, target, callback) {
+    sprite.collide(target, (thisSprite, thatSprite) => {
+        // facing right
+        if (thisSprite.mirrorX() == 1) {
+            if (thisSprite.touching.right) {
+                callback(thisSprite, thatSprite);
+            }
+        // facing left
+        } else {
+            if (thisSprite.touching.left) {
+                callback(thisSprite, thatSprite);
+            }
+        }
+    });
 }
 
 function setup() {
@@ -38,6 +71,7 @@ function setup() {
     kai.addAnimation('normal', kaiAnimation);
 
     trees = new Group();
+    skeletons = new Group();
     let y = 16;
     map.forEach(row => {
         let x = 16;
@@ -45,6 +79,9 @@ function setup() {
             switch (row.charAt(i)) {
                 case 't':
                     trees.add(createTree(x, y));
+                    break;
+                case 's':
+                    skeletons.add(createSkeleton(x, y));
                     break;
                 case ' ':
                     // do nothing
@@ -59,7 +96,7 @@ function setup() {
 }
 
 function draw() {
-    background(200, 200, 200);
+    background(150, 150, 150);
 
     if (character == undefined) {
         fill(0, 102, 153);
@@ -100,6 +137,12 @@ function draw() {
         }
 
         character.collide(trees);
+        skeletons.bounce(trees);
+        skeletons.bounce(skeletons);
+
+        frontalCollision(character, skeletons, (left, right) => {
+            right.remove();
+        });
 
         drawSprites();
     }
