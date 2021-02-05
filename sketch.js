@@ -1,7 +1,9 @@
 let kai;
 let kaiAnimation;
+let kaiDamageAnimation;
 let alex;
 let alexAnimation;
+let alexDamageAnimation;
 let character;
 let map;
 let trees;
@@ -16,20 +18,24 @@ let skeletons;
 let fireAnimations;
 let fires;
 let isGameOver;
+let winner;
 
-let STARTING_HEALTH = 10;
+const STARTING_HEALTH = 10;
+const MAX_FRAME_RATE = 30;
 
-function createCharacterAnimation(imageFile, frameWidth, frameHeight) {
+function createCharacterAnimation(imageFile, frameWidth, frameHeight, frameDelay = 10) {
     let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
     let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = 10;
+    animation.frameDelay = frameDelay;
     return animation;
 }
 
-function createCharacter(x, y, animation) {
+function createCharacter(x, y, animation, damageAnimation) {
     let c = createSprite(x, y);
     c.addAnimation('normal', animation);
+    c.addAnimation('damage', damageAnimation);
     c.health = STARTING_HEALTH;
+    c.damageDelay = 0;
     return c;
 }
 
@@ -69,7 +75,9 @@ function createTree(x, y) {
 
 function preload() {
     alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
+    alexDamageAnimation = createCharacterAnimation('assets/Alex-damage.png', 76, 96, 5);
     kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
+    kaiDamageAnimation = createCharacterAnimation('assets/Kai-damage.png', 76, 96, 5);
     skeletonAnimation = createSkeletonAnimation();
     emptyHeartAnimation = loadAnimation('assets/empty-heart.png');
     halfHeartAnimation = loadAnimation('assets/half-heart.png');
@@ -101,8 +109,10 @@ function layoutMap() {
                     fires.add(createFire(x, y));
                     break;
                 case 'P':
-                    alex = createCharacter(x, y, alexAnimation);
-                    kai = createCharacter(x, y, kaiAnimation);
+                    alex = createCharacter(x, y, alexAnimation, alexDamageAnimation);
+                    alex.setCollider('rectangle', 0, 0, 74, 94);
+                    kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation);
+                    kai.setCollider('rectangle', 3, 2, 60, 86);
                     break;
                 case ' ':
                     // do nothing
@@ -131,11 +141,12 @@ function layoutHearts() {
 }
 
 function setup() {
-    createCanvas(1024, 704);
-    frameRate(30);
+    createCanvas(960, 640);
+    frameRate(MAX_FRAME_RATE);
     layoutMap();
     layoutHearts();
     isGameOver = false;
+    winner = false;
 }
 
 function draw() {
@@ -161,7 +172,11 @@ function draw() {
             fill(0, 0, 0);
             textSize(96);
             textAlign(CENTER);
-            text('GAME OVER', width / 2, height / 2);
+            if (winner) {
+                text('YOU WIN!', camera.position.x, camera.position.y);
+            } else {
+                text('GAME OVER', camera.position.x, camera.position.y);
+            }
         }
     }
 }
@@ -207,11 +222,14 @@ function bounceBack(sprite, bounce) {
 }
 
 function takeDamage(hero) {
-    bounceBack(hero, 15);
-    hero.health -= 1;
-    updateHearts(hero.health);
-    if (hero.health == 0) {
-        gameOver();
+    if (hero.damageDelay == 0) {
+        hero.health -= 1;
+        hero.damageDelay = MAX_FRAME_RATE;
+        hero.changeAnimation('damage');
+        updateHearts(hero.health);
+        if (hero.health == 0) {
+            gameOver();
+        }
     }
 }
 
@@ -238,25 +256,47 @@ function gameOver() {
     });
 }
 
+function killSkeleton(skeleton) {
+    skeleton.remove();
+    if (skeletons.length == 0) {
+        gameOver();
+        winner = true;
+    }
+}
+
 function handleCollisions() {
+    if (character.damageDelay > 0) {
+        character.damageDelay--;
+
+        if (character.damageDelay == 0) {
+            character.changeAnimation('normal');
+        }
+    }
+
     character.collide(trees);
 
     character.collide(skeletons, (hero, skeleton) => {
         // facing right
         if (hero.mirrorX() == 1) {
             if (hero.touching.right) {
-                skeleton.remove();
+                killSkeleton(skeleton);
             } else {
+                bounceBack(hero, 15);
                 takeDamage(hero);
             }
         // facing left
         } else {
             if (hero.touching.left) {
-                skeleton.remove();
+                killSkeleton(skeleton);
             } else {
+                bounceBack(hero, 15);
                 takeDamage(hero);
             }
         }
+    });
+
+    character.overlap(fires, (hero, fire) => {
+        takeDamage(hero);
     });
 }
 
