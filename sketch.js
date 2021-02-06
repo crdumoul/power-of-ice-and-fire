@@ -17,6 +17,12 @@ let skeletons;
 
 let fireAnimations;
 let fires;
+
+let zombieAnimation;
+let burningZombieAnimation;
+let zombies;
+
+
 let isGameOver;
 let winner;
 
@@ -53,6 +59,22 @@ function createSkeleton(x, y) {
     return skeleton;
 }
 
+function createZombieAnimation(file, numFrames) {
+    let spriteSheet = loadSpriteSheet(file, 32, 32, numFrames);
+    let animation = loadAnimation(spriteSheet);
+    animation.frameDelay = 10;
+    return animation;
+}
+
+function createZombie(x, y) {
+    let zombie = createSprite(x, y);
+    zombie.addAnimation('normal', zombieAnimation);
+    zombie.addAnimation('burning', burningZombieAnimation);
+    zombie.setCollider('rectangle', -7, 2, 19, 30);
+    zombie.scale = 2;
+    return zombie;
+}
+
 function createFireAnimation(frameDelay) {
     let spriteSheet = loadSpriteSheet('assets/fire.png', 32, 32, 2);
     let animation = loadAnimation(spriteSheet);
@@ -79,6 +101,8 @@ function preload() {
     kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
     kaiDamageAnimation = createCharacterAnimation('assets/Kai-damage.png', 76, 96, 5);
     skeletonAnimation = createSkeletonAnimation();
+    zombieAnimation = createZombieAnimation('assets/gliding-zombie.png', 1);
+    burningZombieAnimation = createZombieAnimation('assets/burning-zombie.png', 2);
     emptyHeartAnimation = loadAnimation('assets/empty-heart.png');
     halfHeartAnimation = loadAnimation('assets/half-heart.png');
     fullHeartAnimation = loadAnimation('assets/full-heart.png');
@@ -93,6 +117,7 @@ function preload() {
 function layoutMap() {
     trees = new Group();
     skeletons = new Group();
+    zombies = new Group();
     fires = new Group();
     let y = 16;
     map.forEach(row => {
@@ -107,6 +132,9 @@ function layoutMap() {
                     break;
                 case 'f':
                     fires.add(createFire(x, y));
+                    break;
+                case 'z':
+                    zombies.add(createZombie(x, y));
                     break;
                 case 'P':
                     alex = createCharacter(x, y, alexAnimation, alexDamageAnimation);
@@ -147,6 +175,23 @@ function setup() {
     layoutHearts();
     isGameOver = false;
     winner = false;
+    angleMode(DEGREES);
+}
+
+function handleZombies() {
+    zombies.forEach(zombie => {
+        let delta = zombie.position.copy().sub(character.position);
+        if (delta.magSq() < 40000) {
+            zombie.setSpeed(2, delta.heading() + 180);
+        } else {
+            zombie.setSpeed(0);
+        }
+    });
+    zombies.collide(trees);
+    zombies.overlap(fires, (zombie, fire) => {
+        zombie.changeAnimation('burning');
+        setTimeout(() => zombie.remove(), 1000);
+    });
 }
 
 function draw() {
@@ -159,6 +204,7 @@ function draw() {
         selectCharacter();
     } else {
         if (!isGameOver) {
+            handleZombies();
             handleCharacterMovement();
             handleZoom();
         }
@@ -293,6 +339,11 @@ function handleCollisions() {
                 takeDamage(hero);
             }
         }
+    });
+
+    character.collide(zombies, (hero, zombie) => {
+        bounceBack(hero, 15);
+        takeDamage(hero);
     });
 
     character.overlap(fires, (hero, fire) => {
