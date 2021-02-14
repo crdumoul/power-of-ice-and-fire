@@ -42,6 +42,7 @@ function createCharacter(x, y, animation, damageAnimation) {
     c.addAnimation('damage', damageAnimation);
     c.health = STARTING_HEALTH;
     c.damageDelay = 0;
+    //c.debug = true;
     return c;
 }
 
@@ -111,7 +112,7 @@ function preload() {
         fireAnimations.push(createFireAnimation(frameDelay));
     });
 
-    map = loadStrings('assets/map.txt');
+    map = loadStrings('assets/maze-map.txt');
 }
 
 function layoutMap() {
@@ -190,7 +191,7 @@ function handleZombies() {
     zombies.collide(trees);
     zombies.overlap(fires, (zombie, fire) => {
         zombie.changeAnimation('burning');
-        setTimeout(() => zombie.remove(), 1000);
+        zombie.life = MAX_FRAME_RATE / 2;
     });
 }
 
