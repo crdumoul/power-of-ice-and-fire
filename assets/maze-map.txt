@@ -17,30 +17,30 @@
        tt   z     t      s         t                   t         tt
       tt         t               ttttt                  t     a   tt
      tt         t             ttt        s             fftff       tt
-     tt   s    t           tttfff           ttt           tff      tt
+     tt   s    tfff        tttfff           ttt           tff      tt
     tt         t   s      t                t   t          t         tt
     tt        t          t                t     t          t        tt
    tt        t         tt                t       tt         t        tt
-   tt        t   z    t                 t          t        t   f    tt
-  tt        t         t                t           t         t  f     tt
-  tt        t        t            ttttttf           t    z   t        tt
+   tt        t   z    t          f      t          t        t        tt
+  tt        t         t          f     t           t         t ff     tt
+  tt        t        t           fttttttf           t    z   t        tt
   tt       t        tf         ttt     ff            t        t   z s tt
- tt      fft       tff        t                       t       t        tt
- tt      ft        t         t                        t        t       tt
- tt       t      fft        t        z       t        t        t       tt
+ tt     ffft       tff    z   t                       t       t        tt
+ tt       t        t   z     t                        t        t       tt
+ tt       t     ffft        t        z       t        t        t       tt
  tt   a   t       t        t                  t        t       t    s  tt
 tt        t       t       t                    t       t       t       ftt
 tt       t        t       t                    t       t        t      ftt
 tt       t    z  t        t        tttt        t        t  s    t    ffftt
 tt    z  t       t       t        t    t        t       t       t  a    tt
 tt       t       t       t       t      t       t       t       t       tt
-tt       t       t       t       t  W   t       t       t       t   s   tt
+tt       tff     t       t       t  W   t       t       t       t   s   tt
 tt       t       t       t       t      t       t       t       t       tt
-ttff     t       t       t       t      t       t       tff     t   z   tt
+ttff     t       t   s   t       t      t       t       tff     t   z   tt
 tt       t    z  t       t        t    t        t       t       t       tt
 tt       t       t        t  s             s   t        t       t       tt
-tt       t        t       t                    t       t        tf      tt
-tt        t       t       t      s     s  s    t       t       tff  s   tt
+tt       t        t       t                    t       t        t       tt
+tt        t       t       t      s     s  s    t       t       tfff s   tt
  tt       t   s   t        t                  t        t       t       tt
  tt       t        tf       t    s     s     t    a   t   z    t       tt
  tt   s   t        tf        t              t         t        t  z    tt
@@ -48,9 +48,9 @@ tt        t       t       t      s     s  s    t       t       tff  s   tt
   tt      ft    a   t          ttt      ttt          t        tf      tt
   tt        t        t            tttttt            t        t        tt
   tt        t     s   t                f           t   s   fft        tt
-   tt   s    t        t      a         f           t        t fs     tt
+   tt   s    tff      t      a         f           t        t fs     tt
    tt        t         tt                        tt         t        tt
-    tt        t          t                      t          t        tt
+    tt        t          t         z            t          t        tt
     tt         t  z       t                    t          t         tt
      tt    z   t           ttt              ttt           t   z    tt
      tt         t             ttt        ttt             t      ffftt
@@ -62,9 +62,9 @@ tt        t       t       t      s     s  s    t       t       tff  s   tt
           tt            tt            s         tt            tt
            tt             tt                  tt             tt
             tt        z     tttt          tttt        s     tt
-             tt                 tttttttttt                 tt
+             tt                 tttttttttt      f          tt
               ttt                 f              f       ttt
-               ttt        s       f             f       ttt
+               ttt        s       f                     ttt
                 tttt ff              a                tttt
                   tttt                              tttt
                     tttt                          tttt

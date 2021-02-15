@@ -22,7 +22,8 @@ let appleImage;
 let apples;
 
 let skeletonAnimation;
-let skeletons;
+let movingSkeletons;
+let waitingSkeletons;
 
 let fireAnimations;
 let fires;
@@ -31,13 +32,14 @@ let zombieAnimation;
 let burningZombieAnimation;
 let zombies;
 
+let viewport;
 
 let isGameOver;
 let winner;
 
 const STARTING_HEALTH = 12;
 const MAX_FRAME_RATE = 30;
-const CHARACTER_SPEED = 10;
+const CHARACTER_SPEED = 7;
 
 function createCharacterAnimation(imageFile, frameWidth, frameHeight, frameDelay = 10) {
     let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
@@ -52,7 +54,6 @@ function createCharacter(x, y, animation, damageAnimation) {
     c.addAnimation('damage', damageAnimation);
     c.health = STARTING_HEALTH;
     c.damageDelay = 0;
-    //c.debug = true;
     return c;
 }
 
@@ -66,7 +67,6 @@ function createSkeletonAnimation() {
 function createSkeleton(x, y) {
     let skeleton = createSprite(x, y);
     skeleton.addAnimation('normal', skeletonAnimation);
-    skeleton.setSpeed(1, random(0, 360));
     return skeleton;
 }
 
@@ -140,7 +140,8 @@ function layoutMap() {
     apples = new Group();
     trees = new Group();
     visibleTrees = new Group();
-    skeletons = new Group();
+    waitingSkeletons = new Group();
+    movingSkeletons = new Group();
     zombies = new Group();
     fires = new Group();
     let y = 16;
@@ -155,7 +156,7 @@ function layoutMap() {
                     trees.add(createTree(x, y));
                     break;
                 case 's':
-                    skeletons.add(createSkeleton(x, y));
+                    waitingSkeletons.add(createSkeleton(x, y));
                     break;
                 case 'f':
                     fires.add(createFire(x, y));
@@ -168,6 +169,7 @@ function layoutMap() {
                     alex.setCollider('rectangle', 0, 0, 74, 94);
                     kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation);
                     kai.setCollider('rectangle', 3, 2, 60, 86);
+                    createViewport(x, y);
                     break;
                 case 'W':
                     goodWizard = createSprite(x, y);
@@ -199,6 +201,12 @@ function layoutHearts() {
     }
 }
 
+function createViewport(x, y) {
+    viewport = createSprite(x, y);
+    viewport.setCollider('rectangle', 0, 0, width, height);
+    viewport.shapeColor = color(0, 0, 0, 0);
+}
+
 function setup() {
     createCanvas(960, 640);
     frameRate(MAX_FRAME_RATE);
@@ -213,30 +221,30 @@ function handleZombies() {
     zombies.forEach(zombie => {
         let delta = zombie.position.copy().sub(character.position);
         if (delta.magSq() < 40000) {
-            zombie.setSpeed(2, delta.heading() + 180);
+            zombie.setSpeed(1, delta.heading() + 180);
         } else {
             zombie.setSpeed(0);
         }
     });
-    zombies.collide(trees);
+    zombies.collide(visibleTrees);
     zombies.overlap(fires, (zombie, fire) => {
         zombie.changeAnimation('burning');
-        zombie.life = MAX_FRAME_RATE / 2;
+        setTimeout(() => zombie.remove(), 1000);
     });
 }
 
 function calculateVisibleTrees() {
     visibleTrees.clear();
-    trees.forEach(tree => {
-        
+    viewport.overlap(trees, (viewport, tree) => {
+        visibleTrees.add(tree);
     });
 }
 
 function draw() {
     background(150, 150, 150);
 
-    skeletons.bounce(trees);
-    skeletons.bounce(skeletons);
+    movingSkeletons.bounce(trees);
+    movingSkeletons.bounce(movingSkeletons);
 
     if (character == undefined) {
         selectCharacter();
@@ -247,7 +255,7 @@ function draw() {
             handleZoom();
         }
 
-        handleCollisions();
+        handleCharacterCollisions();
         panCamera();
 
         drawSprites();
@@ -279,6 +287,11 @@ function selectCharacter() {
     } else if (keyWentDown('k')) {
         character = kai;
         alex.remove();
+    }
+
+    if (character) {
+        calculateVisibleTrees();
+        calculateVisibleSkeletons();
     }
 }
 
@@ -336,19 +349,13 @@ function gameOver() {
     getSprites().forEach(sprite => {
         sprite.velocity.x = 0;
         sprite.velocity.y = 0;
-        sprite.animation.stop();
+        if (sprite.animation) {
+            sprite.animation.stop();
+        }
     });
 }
 
-function killSkeleton(skeleton) {
-    skeleton.remove();
-    if (skeletons.length == 0) {
-        gameOver();
-        winner = true;
-    }
-}
-
-function handleCollisions() {
+function handleCharacterCollisions() {
     if (character.damageDelay > 0) {
         character.damageDelay--;
 
@@ -357,31 +364,32 @@ function handleCollisions() {
         }
     }
 
-    character.collide(trees);
+    character.collide(visibleTrees);
 
-    character.collide(skeletons, (hero, skeleton) => {
-        // facing right
-        if (hero.mirrorX() == 1) {
-            if (hero.touching.right) {
-                killSkeleton(skeleton);
+    character.displace(movingSkeletons, (hero, skeleton) => {
+        if (hero.damageDelay == 0) {
+            // facing right
+            if (hero.mirrorX() == 1) {
+                if (hero.touching.right) {
+                    skeleton.remove();
+                } else {
+                    takeDamage(hero);
+                }
+            // facing left
             } else {
-                bounceBack(hero, 15);
-                takeDamage(hero);
-            }
-        // facing left
-        } else {
-            if (hero.touching.left) {
-                killSkeleton(skeleton);
-            } else {
-                bounceBack(hero, 15);
-                takeDamage(hero);
+                if (hero.touching.left) {
+                    skeleton.remove();
+                } else {
+                    takeDamage(hero);
+                }
             }
         }
     });
 
-    character.collide(zombies, (hero, zombie) => {
-        bounceBack(hero, 15);
-        takeDamage(hero);
+    character.displace(zombies, (hero, zombie) => {
+        if (hero.damageDelay == 0) {
+            takeDamage(hero);
+        }
     });
 
     character.overlap(fires, (hero, fire) => {
@@ -416,23 +424,51 @@ function handleCharacterMovement() {
 }
 
 function panCamera() {
-    let xThreshold = (width / 2) - (character.width / 2) - 50;
     let characterX = character.position.x;
     let cameraX = camera.position.x;
+    let characterY = character.position.y;
+    let cameraY = camera.position.y;
+    let pan = {apply: false};
+
+    let xThreshold = (width / 2) - (character.width / 2) - 50;
     if (characterX > cameraX + xThreshold ||
         characterX < cameraX - xThreshold) {
-        camera.position.x = characterX;
-        moveHearts(characterX - cameraX, 0);
+
+        pan.apply = true;
+        pan.x = characterX;
+        pan.y = cameraY;
+        pan.deltaX = characterX - cameraX;
+        pan.deltaY = 0;
     }
 
     let yThreshold = (height / 2) - (character.height / 2) - 50;
-    let characterY = character.position.y;
-    let cameraY = camera.position.y;
     if (characterY > cameraY + yThreshold ||
         characterY < cameraY - yThreshold) {
-        camera.position.y = characterY;
-        moveHearts(0, characterY - cameraY);
+
+        pan.apply = true;
+        pan.x = cameraX
+        pan.y = characterY;
+        pan.deltaX = 0;
+        pan.deltaY = characterY - cameraY;
     }
+
+    if (pan.apply) {
+        camera.position.x = pan.x;
+        camera.position.y = pan.y;
+        viewport.position.x = pan.x;
+        viewport.position.y = pan.y;
+        moveHearts(pan.deltaX, pan.deltaY);
+        calculateVisibleTrees();
+        calculateVisibleSkeletons();
+    }
+}
+
+function calculateVisibleSkeletons() {
+    viewport.overlap(waitingSkeletons, (viewport, skeleton) => {
+        skeleton.setSpeed(1, random(0, 360));
+        waitingSkeletons.remove(skeleton);
+        movingSkeletons.add(skeleton);
+    });
 }
 
 function moveHearts(deltaX, deltaY) {
