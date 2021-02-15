@@ -35,7 +35,7 @@ let zombies;
 let isGameOver;
 let winner;
 
-const STARTING_HEALTH = 10;
+const STARTING_HEALTH = 12;
 const MAX_FRAME_RATE = 30;
 const CHARACTER_SPEED = 10;
 
