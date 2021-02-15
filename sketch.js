@@ -27,10 +27,14 @@ let waitingSkeletons;
 
 let fireAnimations;
 let fires;
+let visibleFires;
 
 let zombieAnimation;
 let burningZombieAnimation;
 let zombies;
+
+let scepterImage;
+let scepter;
 
 let viewport;
 
@@ -115,6 +119,7 @@ function createApple(x, y) {
 }
 
 function preload() {
+    scepterImage = loadImage('assets/sun-scepter.png');
     goodWizardImage = loadImage('assets/good-wizard.png');
     treeImage = loadImage('assets/tree1.png');
     appleImage = loadImage('assets/apple.png');
@@ -144,6 +149,7 @@ function layoutMap() {
     movingSkeletons = new Group();
     zombies = new Group();
     fires = new Group();
+    visibleFires = new Group();
     let y = 16;
     map.forEach(row => {
         let x = 16;
@@ -172,8 +178,8 @@ function layoutMap() {
                     createViewport(x, y);
                     break;
                 case 'W':
-                    goodWizard = createSprite(x, y);
-                    goodWizard.addImage(goodWizardImage);
+                    createGoodWizard(x, y);
+                    createScepter(x, y);
                     break;
                 case ' ':
                     // do nothing
@@ -185,6 +191,33 @@ function layoutMap() {
         }
         y += 32;
     });
+}
+
+function createGoodWizard(x, y) {
+    goodWizard = createSprite(x, y);
+    goodWizard.addImage(goodWizardImage);
+    goodWizard.setCollider('rectangle', 12, 0, 60, 100);
+}
+
+function createScepter(x, y) {
+    scepter = createSprite(x + 60, y);
+    scepter.addImage(scepterImage);
+    scepter.visible = false;
+    scepter.growth = 0.1;
+}
+
+function revealScepter(x, y) {
+    scepter.position.x = x;
+    scepter.position.y = y + 20;
+    scepter.visible = true;
+    scepter.rotationSpeed = 2;
+}
+
+function spinScepter() {
+    scepter.scale += scepter.growth;
+    if (scepter.scale > 4 || scepter.scale < 1) {
+        scepter.growth *= -1;
+    }
 }
 
 function layoutHearts() {
@@ -227,7 +260,7 @@ function handleZombies() {
         }
     });
     zombies.collide(visibleTrees);
-    zombies.overlap(fires, (zombie, fire) => {
+    zombies.overlap(visibleFires, (zombie, fire) => {
         zombie.changeAnimation('burning');
         setTimeout(() => zombie.remove(), 1000);
     });
@@ -237,6 +270,13 @@ function calculateVisibleTrees() {
     visibleTrees.clear();
     viewport.overlap(trees, (viewport, tree) => {
         visibleTrees.add(tree);
+    });
+}
+
+function calculateVisibleFires() {
+    visibleFires.clear();
+    viewport.overlap(fires, (viewport, fire) => {
+        visibleFires.add(fire);
     });
 }
 
@@ -261,11 +301,14 @@ function draw() {
         drawSprites();
 
         if (isGameOver) {
-            fill(0, 0, 0);
-            textSize(96);
+            fill(255, 255, 255);
             textAlign(CENTER);
             if (winner) {
+                textSize(96);
                 text('YOU WIN!', camera.position.x, camera.position.y);
+                textSize(32);
+                text('You\'ve earned a piece of the Sun Scepter', camera.position.x, camera.position.y + 50);
+                spinScepter();
             } else {
                 text('GAME OVER', camera.position.x, camera.position.y);
             }
@@ -292,6 +335,7 @@ function selectCharacter() {
     if (character) {
         calculateVisibleTrees();
         calculateVisibleSkeletons();
+        calculateVisibleFires();
     }
 }
 
@@ -367,21 +411,19 @@ function handleCharacterCollisions() {
     character.collide(visibleTrees);
 
     character.displace(movingSkeletons, (hero, skeleton) => {
-        if (hero.damageDelay == 0) {
-            // facing right
-            if (hero.mirrorX() == 1) {
-                if (hero.touching.right) {
-                    skeleton.remove();
-                } else {
-                    takeDamage(hero);
-                }
-            // facing left
+        // facing right
+        if (hero.mirrorX() == 1) {
+            if (hero.touching.right) {
+                skeleton.remove();
             } else {
-                if (hero.touching.left) {
-                    skeleton.remove();
-                } else {
-                    takeDamage(hero);
-                }
+                takeDamage(hero);
+            }
+        // facing left
+        } else {
+            if (hero.touching.left) {
+                skeleton.remove();
+            } else {
+                takeDamage(hero);
             }
         }
     });
@@ -392,7 +434,7 @@ function handleCharacterCollisions() {
         }
     });
 
-    character.overlap(fires, (hero, fire) => {
+    character.overlap(visibleFires, (hero, fire) => {
         takeDamage(hero);
     });
 
@@ -400,6 +442,12 @@ function handleCharacterCollisions() {
         hero.health = Math.min(STARTING_HEALTH, hero.health + 2);
         updateHearts(hero.health);
         apple.remove();
+    });
+
+    character.overlap(goodWizard, (hero, wizard) => {
+        winner = true;
+        revealScepter(camera.position.x, camera.position.y + 90);
+        gameOver();
     });
 }
 
@@ -460,6 +508,7 @@ function panCamera() {
         moveHearts(pan.deltaX, pan.deltaY);
         calculateVisibleTrees();
         calculateVisibleSkeletons();
+        calculateVisibleFires();
     }
 }
 
