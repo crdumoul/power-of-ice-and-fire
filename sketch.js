@@ -6,11 +6,20 @@ let alexAnimation;
 let alexDamageAnimation;
 let character;
 let map;
-let trees;
 let hearts;
 let emptyHeartAnimation;
 let halfHeartAnimation;
 let fullHeartAnimation;
+
+let treeImage;
+let trees;
+let visibleTrees;
+
+let goodWizardImage;
+let goodWizard;
+
+let appleImage;
+let apples;
 
 let skeletonAnimation;
 let skeletons;
@@ -28,6 +37,7 @@ let winner;
 
 const STARTING_HEALTH = 10;
 const MAX_FRAME_RATE = 30;
+const CHARACTER_SPEED = 10;
 
 function createCharacterAnimation(imageFile, frameWidth, frameHeight, frameDelay = 10) {
     let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
@@ -91,12 +101,23 @@ function createFire(x, y) {
 
 function createTree(x, y) {
     let tree = createSprite(x, y);
-    tree.addAnimation('normal', 'assets/tree1.png');
+    tree.addImage(treeImage);
+    tree.setCollider('circle', 0, 0, 16);
     tree.immovable = true;
     return tree;
 }
 
+function createApple(x, y) {
+    let apple = createSprite(x, y);
+    apple.addImage(appleImage);
+    apple.immovable = true;
+    return apple;
+}
+
 function preload() {
+    goodWizardImage = loadImage('assets/good-wizard.png');
+    treeImage = loadImage('assets/tree1.png');
+    appleImage = loadImage('assets/apple.png');
     alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
     alexDamageAnimation = createCharacterAnimation('assets/Alex-damage.png', 76, 96, 5);
     kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
@@ -116,7 +137,9 @@ function preload() {
 }
 
 function layoutMap() {
+    apples = new Group();
     trees = new Group();
+    visibleTrees = new Group();
     skeletons = new Group();
     zombies = new Group();
     fires = new Group();
@@ -125,6 +148,9 @@ function layoutMap() {
         let x = 16;
         for(let i = 0 ; i < row.length ; i++) {
             switch (row.charAt(i)) {
+                case 'a':
+                    apples.add(createApple(x, y));
+                    break;
                 case 't':
                     trees.add(createTree(x, y));
                     break;
@@ -142,6 +168,10 @@ function layoutMap() {
                     alex.setCollider('rectangle', 0, 0, 74, 94);
                     kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation);
                     kai.setCollider('rectangle', 3, 2, 60, 86);
+                    break;
+                case 'W':
+                    goodWizard = createSprite(x, y);
+                    goodWizard.addImage(goodWizardImage);
                     break;
                 case ' ':
                     // do nothing
@@ -192,6 +222,13 @@ function handleZombies() {
     zombies.overlap(fires, (zombie, fire) => {
         zombie.changeAnimation('burning');
         zombie.life = MAX_FRAME_RATE / 2;
+    });
+}
+
+function calculateVisibleTrees() {
+    visibleTrees.clear();
+    trees.forEach(tree => {
+        
     });
 }
 
@@ -350,6 +387,12 @@ function handleCollisions() {
     character.overlap(fires, (hero, fire) => {
         takeDamage(hero);
     });
+
+    character.collide(apples, (hero, apple) => {
+        hero.health = Math.min(STARTING_HEALTH, hero.health + 2);
+        updateHearts(hero.health);
+        apple.remove();
+    });
 }
 
 function handleCharacterMovement() {
@@ -357,23 +400,23 @@ function handleCharacterMovement() {
     character.velocity.y = 0;
 
     if (keyIsDown(LEFT_ARROW)) {
-        character.velocity.x = -5;
+        character.velocity.x = -CHARACTER_SPEED;
         character.mirrorX(-1);
     }
     if (keyIsDown(RIGHT_ARROW)) {
-        character.velocity.x = 5;
+        character.velocity.x = CHARACTER_SPEED;
         character.mirrorX(1);
     }
     if (keyIsDown(UP_ARROW)) {
-        character.velocity.y = -5;
+        character.velocity.y = -CHARACTER_SPEED;
     }
     if (keyIsDown(DOWN_ARROW)) {
-        character.velocity.y = 5;
+        character.velocity.y = CHARACTER_SPEED;
     }
 }
 
 function panCamera() {
-    let xThreshold = (width / 2) - (character.width / 2);
+    let xThreshold = (width / 2) - (character.width / 2) - 50;
     let characterX = character.position.x;
     let cameraX = camera.position.x;
     if (characterX > cameraX + xThreshold ||
@@ -382,7 +425,7 @@ function panCamera() {
         moveHearts(characterX - cameraX, 0);
     }
 
-    let yThreshold = (height / 2) - (character.height / 2);
+    let yThreshold = (height / 2) - (character.height / 2) - 50;
     let characterY = character.position.y;
     let cameraY = camera.position.y;
     if (characterY > cameraY + yThreshold ||
