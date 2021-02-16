@@ -179,7 +179,6 @@ function layoutMap() {
                     break;
                 case 'W':
                     createGoodWizard(x, y);
-                    createScepter(x, y);
                     break;
                 case ' ':
                     // do nothing
@@ -200,7 +199,7 @@ function createGoodWizard(x, y) {
 }
 
 function createScepter(x, y) {
-    scepter = createSprite(x + 60, y);
+    scepter = createSprite(x, y);
     scepter.addImage(scepterImage);
     scepter.visible = false;
     scepter.growth = 0.1;
@@ -211,6 +210,7 @@ function revealScepter(x, y) {
     scepter.position.y = y + 20;
     scepter.visible = true;
     scepter.rotationSpeed = 2;
+    scepter.depth = 10000;
 }
 
 function spinScepter() {
@@ -243,6 +243,7 @@ function createViewport(x, y) {
 function setup() {
     createCanvas(960, 640);
     frameRate(MAX_FRAME_RATE);
+    createScepter(0, 0);
     layoutMap();
     layoutHearts();
     isGameOver = false;
