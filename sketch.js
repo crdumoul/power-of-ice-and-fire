@@ -1,9 +1,7 @@
-let kai;
-let kaiAnimation;
-let kaiDamageAnimation;
-let alex;
-let alexAnimation;
-let alexDamageAnimation;
+import { createCharacters, characterPreload, selectCharacter, STARTING_HEALTH } from './character.js';
+import { createSkeleton, skeletonPreload } from './skeleton.js';
+import { createZombie, zombiePreload } from './zombie.js';
+
 let character;
 let map;
 let hearts;
@@ -21,7 +19,6 @@ let goodWizard;
 let appleImage;
 let apples;
 
-let skeletonAnimation;
 let movingSkeletons;
 let waitingSkeletons;
 
@@ -29,8 +26,6 @@ let fireAnimations;
 let fires;
 let visibleFires;
 
-let zombieAnimation;
-let burningZombieAnimation;
 let zombies;
 
 let scepterImage;
@@ -41,54 +36,7 @@ let viewport;
 let isGameOver;
 let winner;
 
-const STARTING_HEALTH = 12;
 const MAX_FRAME_RATE = 30;
-const CHARACTER_SPEED = 7;
-
-function createCharacterAnimation(imageFile, frameWidth, frameHeight, frameDelay = 10) {
-    let spriteSheet = loadSpriteSheet(imageFile, frameWidth, frameHeight, 2);
-    let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = frameDelay;
-    return animation;
-}
-
-function createCharacter(x, y, animation, damageAnimation) {
-    let c = createSprite(x, y);
-    c.addAnimation('normal', animation);
-    c.addAnimation('damage', damageAnimation);
-    c.health = STARTING_HEALTH;
-    c.damageDelay = 0;
-    return c;
-}
-
-function createSkeletonAnimation() {
-    let spriteSheet = loadSpriteSheet('assets/skeleton.png', 22, 32, 2);
-    let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = 5;
-    return animation;
-}
-
-function createSkeleton(x, y) {
-    let skeleton = createSprite(x, y);
-    skeleton.addAnimation('normal', skeletonAnimation);
-    return skeleton;
-}
-
-function createZombieAnimation(file, numFrames) {
-    let spriteSheet = loadSpriteSheet(file, 32, 32, numFrames);
-    let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = 10;
-    return animation;
-}
-
-function createZombie(x, y) {
-    let zombie = createSprite(x, y);
-    zombie.addAnimation('normal', zombieAnimation);
-    zombie.addAnimation('burning', burningZombieAnimation);
-    zombie.setCollider('rectangle', -7, 2, 19, 30);
-    zombie.scale = 2;
-    return zombie;
-}
 
 function createFireAnimation(frameDelay) {
     let spriteSheet = loadSpriteSheet('assets/fire.png', 32, 32, 2);
@@ -118,18 +66,14 @@ function createApple(x, y) {
     return apple;
 }
 
-function preload() {
+window.preload = function() {
+    characterPreload();
+    skeletonPreload();
+    zombiePreload();
     scepterImage = loadImage('assets/sun-scepter.png');
     goodWizardImage = loadImage('assets/good-wizard.png');
     treeImage = loadImage('assets/tree1.png');
     appleImage = loadImage('assets/apple.png');
-    alexAnimation = createCharacterAnimation('assets/Alex.png', 76, 96);
-    alexDamageAnimation = createCharacterAnimation('assets/Alex-damage.png', 76, 96, 5);
-    kaiAnimation = createCharacterAnimation('assets/Kai.png', 76, 96);
-    kaiDamageAnimation = createCharacterAnimation('assets/Kai-damage.png', 76, 96, 5);
-    skeletonAnimation = createSkeletonAnimation();
-    zombieAnimation = createZombieAnimation('assets/gliding-zombie.png', 1);
-    burningZombieAnimation = createZombieAnimation('assets/burning-zombie.png', 2);
     emptyHeartAnimation = loadAnimation('assets/empty-heart.png');
     halfHeartAnimation = loadAnimation('assets/half-heart.png');
     fullHeartAnimation = loadAnimation('assets/full-heart.png');
@@ -171,10 +115,7 @@ function layoutMap() {
                     zombies.add(createZombie(x, y));
                     break;
                 case 'P':
-                    alex = createCharacter(x, y, alexAnimation, alexDamageAnimation);
-                    alex.setCollider('rectangle', 0, 0, 74, 94);
-                    kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation);
-                    kai.setCollider('rectangle', 3, 2, 60, 86);
+                    createCharacters(x, y);
                     createViewport(x, y);
                     break;
                 case 'W':
@@ -240,7 +181,7 @@ function createViewport(x, y) {
     viewport.shapeColor = color(0, 0, 0, 0);
 }
 
-function setup() {
+window.setup = function() {
     createCanvas(960, 640);
     frameRate(MAX_FRAME_RATE);
     createScepter(0, 0);
@@ -252,19 +193,9 @@ function setup() {
 }
 
 function handleZombies() {
-    zombies.forEach(zombie => {
-        let delta = zombie.position.copy().sub(character.position);
-        if (delta.magSq() < 40000) {
-            zombie.setSpeed(1, delta.heading() + 180);
-        } else {
-            zombie.setSpeed(0);
-        }
-    });
+    zombies.forEach(zombie => zombie.move(character));
     zombies.collide(visibleTrees);
-    zombies.overlap(visibleFires, (zombie, fire) => {
-        zombie.changeAnimation('burning');
-        setTimeout(() => zombie.remove(), 1000);
-    });
+    zombies.overlap(visibleFires, (zombie, fire) => zombie.burn());
 }
 
 function calculateVisibleTrees() {
@@ -281,18 +212,23 @@ function calculateVisibleFires() {
     });
 }
 
-function draw() {
+window.draw = function() {
     background(150, 150, 150);
 
     movingSkeletons.bounce(trees);
     movingSkeletons.bounce(movingSkeletons);
 
     if (character == undefined) {
-        selectCharacter();
+        character = selectCharacter();
+        if (character) {
+            calculateVisibleTrees();
+            calculateVisibleSkeletons();
+            calculateVisibleFires();
+        }
     } else {
         if (!isGameOver) {
             handleZombies();
-            handleCharacterMovement();
+            character.move();
             handleZoom();
         }
 
@@ -317,29 +253,6 @@ function draw() {
     }
 }
 
-function selectCharacter() {
-    fill(0, 102, 153);
-    textSize(48);
-    textAlign(CENTER);
-    text('Who do you want to be?', width / 2, (height / 2) - 50);
-    text("Press 'a' for Alex", width / 2, height / 2);
-    text("Press 'k' for Kai", width / 2, (height / 2) + 50);
-
-    if (keyWentDown('a')) {
-        character = alex;
-        kai.remove();
-    } else if (keyWentDown('k')) {
-        character = kai;
-        alex.remove();
-    }
-
-    if (character) {
-        calculateVisibleTrees();
-        calculateVisibleSkeletons();
-        calculateVisibleFires();
-    }
-}
-
 function handleZoom() {
     if (keyDown('z')) {
         camera.zoom = 0.5;
@@ -348,26 +261,8 @@ function handleZoom() {
     }
 }
 
-function bounceBack(sprite, bounce) {
-    if (sprite.touching.left) {
-        sprite.position.x += bounce;
-    }
-    if (sprite.touching.right) {
-        sprite.position.x -= bounce;
-    }
-    if (sprite.touching.top) {
-        sprite.position.y += bounce;
-    }
-    if (sprite.touching.bottom) {
-        sprite.position.y -= bounce;
-    }
-}
-
 function takeDamage(hero) {
-    if (hero.damageDelay == 0) {
-        hero.health -= 1;
-        hero.damageDelay = MAX_FRAME_RATE;
-        hero.changeAnimation('damage');
+    if (hero.takeDamage()) {
         updateHearts(hero.health);
         if (hero.health == 0) {
             gameOver();
@@ -401,13 +296,7 @@ function gameOver() {
 }
 
 function handleCharacterCollisions() {
-    if (character.damageDelay > 0) {
-        character.damageDelay--;
-
-        if (character.damageDelay == 0) {
-            character.changeAnimation('normal');
-        }
-    }
+    character.updateDamageDelay();
 
     character.collide(visibleTrees);
 
@@ -430,9 +319,7 @@ function handleCharacterCollisions() {
     });
 
     character.displace(zombies, (hero, zombie) => {
-        if (hero.damageDelay == 0) {
-            takeDamage(hero);
-        }
+        takeDamage(hero);
     });
 
     character.overlap(visibleFires, (hero, fire) => {
@@ -450,26 +337,6 @@ function handleCharacterCollisions() {
         revealScepter(camera.position.x, camera.position.y + 90);
         gameOver();
     });
-}
-
-function handleCharacterMovement() {
-    character.velocity.x = 0;
-    character.velocity.y = 0;
-
-    if (keyIsDown(LEFT_ARROW)) {
-        character.velocity.x = -CHARACTER_SPEED;
-        character.mirrorX(-1);
-    }
-    if (keyIsDown(RIGHT_ARROW)) {
-        character.velocity.x = CHARACTER_SPEED;
-        character.mirrorX(1);
-    }
-    if (keyIsDown(UP_ARROW)) {
-        character.velocity.y = -CHARACTER_SPEED;
-    }
-    if (keyIsDown(DOWN_ARROW)) {
-        character.velocity.y = CHARACTER_SPEED;
-    }
 }
 
 function panCamera() {
