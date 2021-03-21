@@ -29,9 +29,9 @@ function createAnimation(imageFile, frameWidth, frameHeight, frameDelay, p5) {
 
 export function createCharacters(x, y, p5) {
     p5 = p5 || window;
-    alex = createCharacter(x, y, alexAnimation, alexDamageAnimation);
+    alex = createCharacter(x, y, alexAnimation, alexDamageAnimation, p5);
     alex.setCollider('rectangle', 0, 0, 74, 94);
-    kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation);
+    kai = createCharacter(x, y, kaiAnimation, kaiDamageAnimation, p5);
     kai.setCollider('rectangle', 3, 2, 60, 86);
 }
 
