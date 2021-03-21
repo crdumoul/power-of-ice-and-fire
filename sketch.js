@@ -1,86 +1,44 @@
 import { createCharacters, characterPreload, selectCharacter, STARTING_HEALTH } from './character.js';
 import { createSkeleton, skeletonPreload } from './skeleton.js';
 import { createZombie, zombiePreload } from './zombie.js';
+import { createFire, firePreload } from './fire.js';
+import { createHearts, heartsPreload } from './hearts.js';
+import { createTree, treePreload } from './tree.js';
+import { createViewport } from './viewport.js';
+import { createApple, foodPreload } from './food.js';
+import { createGoodWizard, goodWizardPreload } from './good_wizard.js';
+import { createScepter, scepterPreload } from './scepter.js';
 
 let character;
 let map;
 let hearts;
-let emptyHeartAnimation;
-let halfHeartAnimation;
-let fullHeartAnimation;
-
-let treeImage;
-let trees;
-let visibleTrees;
-
-let goodWizardImage;
 let goodWizard;
-
-let appleImage;
-let apples;
-
-let movingSkeletons;
-let waitingSkeletons;
-
-let fireAnimations;
-let fires;
-let visibleFires;
-
-let zombies;
-
-let scepterImage;
 let scepter;
-
 let viewport;
-
 let isGameOver;
 let winner;
 
+let apples;
+let trees;
+let visibleTrees;
+let movingSkeletons;
+let waitingSkeletons;
+let fires;
+let visibleFires;
+let zombies;
+
 const MAX_FRAME_RATE = 30;
-
-function createFireAnimation(frameDelay) {
-    let spriteSheet = loadSpriteSheet('assets/fire.png', 32, 32, 2);
-    let animation = loadAnimation(spriteSheet);
-    animation.frameDelay = frameDelay;
-    return animation;
-}
-
-function createFire(x, y) {
-    let fire = createSprite(x, y);
-    fire.addAnimation('normal', random(fireAnimations));
-    return fire;
-}
-
-function createTree(x, y) {
-    let tree = createSprite(x, y);
-    tree.addImage(treeImage);
-    tree.setCollider('circle', 0, 0, 16);
-    tree.immovable = true;
-    return tree;
-}
-
-function createApple(x, y) {
-    let apple = createSprite(x, y);
-    apple.addImage(appleImage);
-    apple.immovable = true;
-    return apple;
-}
 
 window.preload = function() {
     characterPreload();
     skeletonPreload();
     zombiePreload();
-    scepterImage = loadImage('assets/sun-scepter.png');
-    goodWizardImage = loadImage('assets/good-wizard.png');
-    treeImage = loadImage('assets/tree1.png');
-    appleImage = loadImage('assets/apple.png');
-    emptyHeartAnimation = loadAnimation('assets/empty-heart.png');
-    halfHeartAnimation = loadAnimation('assets/half-heart.png');
-    fullHeartAnimation = loadAnimation('assets/full-heart.png');
-    fireAnimations = [];
-    [8, 10, 12].forEach(frameDelay => {
-        fireAnimations.push(createFireAnimation(frameDelay));
-    });
+    firePreload();
+    heartsPreload();
+    treePreload();
+    foodPreload();
+    goodWizardPreload();
+    scepterPreload();
 
     map = loadStrings('assets/maze-map.txt');
 }
@@ -89,11 +47,12 @@ function layoutMap() {
     apples = new Group();
     trees = new Group();
     visibleTrees = new Group();
-    waitingSkeletons = new Group();
     movingSkeletons = new Group();
-    zombies = new Group();
+    waitingSkeletons = new Group();
     fires = new Group();
     visibleFires = new Group();
+    zombies = new Group();
+
     let y = 16;
     map.forEach(row => {
         let x = 16;
@@ -116,10 +75,10 @@ function layoutMap() {
                     break;
                 case 'P':
                     createCharacters(x, y);
-                    createViewport(x, y);
+                    viewport = createViewport(x, y);
                     break;
                 case 'W':
-                    createGoodWizard(x, y);
+                    goodWizard = createGoodWizard(x, y);
                     break;
                 case ' ':
                     // do nothing
@@ -133,83 +92,22 @@ function layoutMap() {
     });
 }
 
-function createGoodWizard(x, y) {
-    goodWizard = createSprite(x, y);
-    goodWizard.addImage(goodWizardImage);
-    goodWizard.setCollider('rectangle', 12, 0, 60, 100);
-}
-
-function createScepter(x, y) {
-    scepter = createSprite(x, y);
-    scepter.addImage(scepterImage);
-    scepter.visible = false;
-    scepter.growth = 0.1;
-}
-
-function revealScepter(x, y) {
-    scepter.position.x = x;
-    scepter.position.y = y + 20;
-    scepter.visible = true;
-    scepter.rotationSpeed = 2;
-    scepter.depth = 10000;
-}
-
-function spinScepter() {
-    scepter.scale += scepter.growth;
-    if (scepter.scale > 4 || scepter.scale < 1) {
-        scepter.growth *= -1;
-    }
-}
-
-function layoutHearts() {
-    hearts = new Group();
-    let numHearts = STARTING_HEALTH / 2;
-    let heartWidth = 35;
-    for (let i = 0 ; i < numHearts ; i++) {
-        let heart = createSprite((width / 2) - (numHearts * heartWidth / 2) + (i * heartWidth), height - 32);
-        heart.addAnimation('empty', emptyHeartAnimation)
-        heart.addAnimation('half', halfHeartAnimation)
-        heart.addAnimation('full', fullHeartAnimation)
-        heart.changeAnimation('full');
-        hearts.add(heart);
-    }
-}
-
-function createViewport(x, y) {
-    viewport = createSprite(x, y);
-    viewport.setCollider('rectangle', 0, 0, width, height);
-    viewport.shapeColor = color(0, 0, 0, 0);
-}
-
 window.setup = function() {
     createCanvas(960, 640);
     frameRate(MAX_FRAME_RATE);
-    createScepter(0, 0);
-    layoutMap();
-    layoutHearts();
+    angleMode(DEGREES);
     isGameOver = false;
     winner = false;
-    angleMode(DEGREES);
+
+    layoutMap();
+    scepter = createScepter(0, 0);
+    hearts = createHearts();
 }
 
 function handleZombies() {
     zombies.forEach(zombie => zombie.move(character));
     zombies.collide(visibleTrees);
     zombies.overlap(visibleFires, (zombie, fire) => zombie.burn());
-}
-
-function calculateVisibleTrees() {
-    visibleTrees.clear();
-    viewport.overlap(trees, (viewport, tree) => {
-        visibleTrees.add(tree);
-    });
-}
-
-function calculateVisibleFires() {
-    visibleFires.clear();
-    viewport.overlap(fires, (viewport, fire) => {
-        visibleFires.add(fire);
-    });
 }
 
 window.draw = function() {
@@ -221,9 +119,9 @@ window.draw = function() {
     if (character == undefined) {
         character = selectCharacter();
         if (character) {
-            calculateVisibleTrees();
+            viewport.markVisible(trees, visibleTrees);
+            viewport.markVisible(fires, visibleFires);
             calculateVisibleSkeletons();
-            calculateVisibleFires();
         }
     } else {
         if (!isGameOver) {
@@ -240,12 +138,12 @@ window.draw = function() {
         if (isGameOver) {
             fill(255, 255, 255);
             textAlign(CENTER);
+            textSize(96);
             if (winner) {
-                textSize(96);
                 text('YOU WIN!', camera.position.x, camera.position.y);
                 textSize(32);
                 text('You\'ve earned a piece of the Sun Scepter', camera.position.x, camera.position.y + 50);
-                spinScepter();
+                scepter.spin();
             } else {
                 text('GAME OVER', camera.position.x, camera.position.y);
             }
@@ -263,24 +161,10 @@ function handleZoom() {
 
 function takeDamage(hero) {
     if (hero.takeDamage()) {
-        updateHearts(hero.health);
+        hearts.update(hero.health);
         if (hero.health == 0) {
             gameOver();
         }
-    }
-}
-
-function updateHearts(health) {
-    for (let i = 0 ; i < hearts.length ; i++) {
-        let heart = hearts.get(i);
-        if(health >= 2) {
-            heart.changeAnimation('full');
-        } else if (health >= 1) {
-            heart.changeAnimation('half');
-        } else {
-            heart.changeAnimation('empty');
-        }
-        health -= 2;
     }
 }
 
@@ -328,13 +212,13 @@ function handleCharacterCollisions() {
 
     character.collide(apples, (hero, apple) => {
         hero.health = Math.min(STARTING_HEALTH, hero.health + 2);
-        updateHearts(hero.health);
+        hearts.update(hero.health);
         apple.remove();
     });
 
     character.overlap(goodWizard, (hero, wizard) => {
         winner = true;
-        revealScepter(camera.position.x, camera.position.y + 90);
+        scepter.reveal(camera.position.x, camera.position.y + 90);
         gameOver();
     });
 }
@@ -373,10 +257,10 @@ function panCamera() {
         camera.position.y = pan.y;
         viewport.position.x = pan.x;
         viewport.position.y = pan.y;
-        moveHearts(pan.deltaX, pan.deltaY);
-        calculateVisibleTrees();
+        hearts.move(pan.deltaX, pan.deltaY);
+        viewport.markVisible(trees, visibleTrees);
+        viewport.markVisible(fires, visibleFires);
         calculateVisibleSkeletons();
-        calculateVisibleFires();
     }
 }
 
@@ -388,10 +272,3 @@ function calculateVisibleSkeletons() {
     });
 }
 
-function moveHearts(deltaX, deltaY) {
-    for (let i = 0 ; i < hearts.length ; i++) {
-        let heart = hearts.get(i);
-        heart.position.x += deltaX;
-        heart.position.y += deltaY;
-    }
-}
